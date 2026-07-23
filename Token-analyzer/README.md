@@ -52,3 +52,11 @@ Relatório no console com:
 - quantidade de entradas de credits encontradas
 - tabela de credits diários
 - total geral
+
+## Estrutura do código
+
+- `Program.cs` — ponto de entrada, orquestra o fluxo (parse → validação → análise → impressão).
+- `Helper.cs` — parsing dos argumentos de linha de comando e de datas.
+- `Validator.cs` — validação dos inputs (diretório existente, intervalo de datas válido).
+- `Printer.cs` — formatação e impressão do relatório no console.
+- `ChatSessionAnalyzer.cs` — varredura recursiva de diretórios, localização das pastas `chatSessions` e extração dos `credits` via regex.
