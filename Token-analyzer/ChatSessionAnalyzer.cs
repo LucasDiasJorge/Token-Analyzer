@@ -16,24 +16,24 @@ public sealed class ChatSessionAnalyzer
 
     public ScanResult Scan(string rootPath, DateTime startDate, DateTime endDate)
     {
-        var start = startDate.Date;
-        var end = endDate.Date.AddDays(1).AddTicks(-1);
+        DateTime start = startDate.Date;
+        DateTime end = endDate.Date.AddDays(1).AddTicks(-1);
 
-        var dailyCredits = new SortedDictionary<DateTime, decimal>();
-        var directoriesFound = 0;
-        var directoriesProcessed = 0;
-        var filesAnalyzed = 0;
-        var creditEntriesFound = 0;
+        SortedDictionary<DateTime, decimal> dailyCredits = new SortedDictionary<DateTime, decimal>();
+        int directoriesFound = 0;
+        int directoriesProcessed = 0;
+        int filesAnalyzed = 0;
+        int creditEntriesFound = 0;
 
-        foreach (var chatSessionsDir in FindDirectoriesByName(rootPath, "chatSessions"))
+        foreach (string chatSessionsDir in FindDirectoriesByName(rootPath, "chatSessions"))
         {
             directoriesFound++;
 
-            var candidateFiles = EnumerateFilesSafe(chatSessionsDir)
+            List<string> candidateFiles = EnumerateFilesSafe(chatSessionsDir)
                 .Where(file => IsInRange(File.GetLastWriteTime(file), start, end))
                 .ToList();
 
-            var directoryInRange = IsInRange(Directory.GetLastWriteTime(chatSessionsDir), start, end);
+            bool directoryInRange = IsInRange(Directory.GetLastWriteTime(chatSessionsDir), start, end);
             if (!directoryInRange && candidateFiles.Count == 0)
             {
                 continue;
@@ -41,12 +41,12 @@ public sealed class ChatSessionAnalyzer
 
             directoriesProcessed++;
 
-            foreach (var file in candidateFiles)
+            foreach (string file in candidateFiles)
             {
                 filesAnalyzed++;
-                var fallbackDate = File.GetLastWriteTime(file);
+                DateTime fallbackDate = File.GetLastWriteTime(file);
 
-                foreach (var entry in ParseCreditsFromFile(file, fallbackDate))
+                foreach (CreditEntry entry in ParseCreditsFromFile(file, fallbackDate))
                 {
                     if (!IsInRange(entry.OccurredAt, start, end))
                     {
@@ -54,7 +54,7 @@ public sealed class ChatSessionAnalyzer
                     }
 
                     creditEntriesFound++;
-                    var date = entry.OccurredAt.Date;
+                    DateTime date = entry.OccurredAt.Date;
 
                     if (!dailyCredits.TryAdd(date, entry.Credits))
                     {
@@ -64,7 +64,7 @@ public sealed class ChatSessionAnalyzer
             }
         }
 
-        var total = dailyCredits.Values.Sum();
+        decimal total = dailyCredits.Values.Sum();
 
         return new ScanResult(
             dailyCredits,
@@ -77,28 +77,28 @@ public sealed class ChatSessionAnalyzer
 
     private static IEnumerable<CreditEntry> ParseCreditsFromFile(string filePath, DateTime fallbackTimestamp)
     {
-        foreach (var line in File.ReadLines(filePath))
+        foreach (string line in File.ReadLines(filePath))
         {
             if (!line.Contains("\"details\"", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
 
-            var detailsMatch = DetailsCreditsRegex.Match(line);
+            Match detailsMatch = DetailsCreditsRegex.Match(line);
             if (!detailsMatch.Success)
             {
                 continue;
             }
 
-            var rawCredits = detailsMatch.Groups["credits"].Value;
-            if (!decimal.TryParse(rawCredits, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var credits))
+            string rawCredits = detailsMatch.Groups["credits"].Value;
+            if (!decimal.TryParse(rawCredits, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal credits))
             {
                 continue;
             }
 
-            var occurredAt = fallbackTimestamp;
-            var timestampMatch = TimestampRegex.Match(line);
-            if (timestampMatch.Success && long.TryParse(timestampMatch.Groups["ts"].Value, out var rawTimestamp))
+            DateTime occurredAt = fallbackTimestamp;
+            Match timestampMatch = TimestampRegex.Match(line);
+            if (timestampMatch.Success && long.TryParse(timestampMatch.Groups["ts"].Value, out long rawTimestamp))
             {
                 occurredAt = ToDateTime(rawTimestamp);
             }
@@ -126,12 +126,12 @@ public sealed class ChatSessionAnalyzer
 
     private static IEnumerable<string> FindDirectoriesByName(string rootPath, string targetDirectoryName)
     {
-        var stack = new Stack<string>();
+        Stack<string> stack = new Stack<string>();
         stack.Push(rootPath);
 
         while (stack.Count > 0)
         {
-            var current = stack.Pop();
+            string current = stack.Pop();
 
             IEnumerable<string> subDirectories;
             try
@@ -147,7 +147,7 @@ public sealed class ChatSessionAnalyzer
                 continue;
             }
 
-            foreach (var subDir in subDirectories)
+            foreach (string subDir in subDirectories)
             {
                 if (string.Equals(Path.GetFileName(subDir), targetDirectoryName, StringComparison.OrdinalIgnoreCase))
                 {
@@ -161,12 +161,12 @@ public sealed class ChatSessionAnalyzer
 
     private static IEnumerable<string> EnumerateFilesSafe(string rootDir)
     {
-        var stack = new Stack<string>();
+        Stack<string> stack = new Stack<string>();
         stack.Push(rootDir);
 
         while (stack.Count > 0)
         {
-            var current = stack.Pop();
+            string current = stack.Pop();
 
             IEnumerable<string> files;
             try
@@ -182,7 +182,7 @@ public sealed class ChatSessionAnalyzer
                 continue;
             }
 
-            foreach (var file in files)
+            foreach (string file in files)
             {
                 yield return file;
             }
@@ -201,7 +201,7 @@ public sealed class ChatSessionAnalyzer
                 continue;
             }
 
-            foreach (var subDir in subDirectories)
+            foreach (string subDir in subDirectories)
             {
                 stack.Push(subDir);
             }
