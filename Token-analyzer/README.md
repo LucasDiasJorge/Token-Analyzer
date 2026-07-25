@@ -26,6 +26,8 @@ Com período customizado:
 dotnet run -- "C:\caminho\da\raiz" "2026-06-01" "2026-06-22"
 ```
 
+Se quiser enviar o relatório para o Slack, defina a variável de ambiente `Slack__Token` e mantenha o e-mail em `src/appsettings.json`.
+
 Formatos de data aceitos:
 
 - `yyyy-MM-dd`
