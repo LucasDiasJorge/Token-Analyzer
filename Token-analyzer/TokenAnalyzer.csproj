@@ -9,6 +9,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
     <PackageReference Include="SlackNet.AspNetCore" Version="0.17.10" />
+    <PackageReference Include="TaskScheduler" Version="2.12.2" />
   </ItemGroup>
   <ItemGroup>
     <None Update="src\appsettings.json" CopyToOutputDirectory="PreserveNewest" TargetPath="appsettings.json" />

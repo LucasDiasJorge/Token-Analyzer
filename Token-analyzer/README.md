@@ -14,7 +14,15 @@ Exemplo de campo analisado:
 
 ## Como executar
 
-No diretório do projeto:
+Para registrar a tarefa `TokenAnalyzerDailyReport` no Agendador do Windows, configurada para executar diariamente às 18:00, execute sem argumentos no diretório que deverá ser analisado:
+
+```powershell
+dotnet run
+```
+
+O diretório atual é armazenado na ação da tarefa e será usado como raiz da análise. Se o horário de registro já tiver passado das 18:00, a primeira execução ocorrerá às 18:00 do dia seguinte.
+
+Para executar a análise manualmente:
 
 ```powershell
 dotnet run -- "C:\caminho\da\raiz"
@@ -57,8 +65,7 @@ Relatório no console com:
 
 ## Estrutura do código
 
-- `Program.cs` — ponto de entrada, orquestra o fluxo (parse → validação → análise → impressão).
-- `Helper.cs` — parsing dos argumentos de linha de comando e de datas.
-- `Validator.cs` — validação dos inputs (diretório existente, intervalo de datas válido).
-- `Printer.cs` — formatação e impressão do relatório no console.
-- `ChatSessionAnalyzer.cs` — varredura recursiva de diretórios, localização das pastas `chatSessions` e extração dos `credits` via regex.
+- `src/Program.cs` — registra o job diário ou orquestra a execução da análise.
+- `src/Infrastructure` — parsing, validação e integração com o Agendador de Tarefas do Windows.
+- `src/Presentation` — formatação e impressão do relatório no console.
+- `src/Services` — análise das sessões e envio da notificação ao Slack.
