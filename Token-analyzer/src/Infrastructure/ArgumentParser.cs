@@ -1,8 +1,8 @@
 ﻿using System.Globalization;
 
-namespace TokenAnalyzer;
+namespace TokenAnalyzer.Infrastructure;
 
-public static class Helper
+public static class ArgumentParser
 {
     public static (string RootPath, DateTime StartDate, DateTime EndDate) ParseArguments(string[] args)
     {

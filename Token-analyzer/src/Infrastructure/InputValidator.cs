@@ -1,6 +1,6 @@
-﻿namespace TokenAnalyzer;
+﻿namespace TokenAnalyzer.Infrastructure;
 
-public static class Validator
+public static class InputValidator
 {
     public static bool ValidateInputs(string rootPath, DateTime startDate, DateTime endDate)
     {

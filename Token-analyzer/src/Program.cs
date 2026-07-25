@@ -37,7 +37,8 @@ public static class Program
     private static void Configure(out string? slackToken, out string? email)
     {
         IConfigurationBuilder builder = new ConfigurationBuilder()
-            .AddJsonFile(Path.Combine("appsettings.json"))
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: true)
             .AddEnvironmentVariables();
         IConfiguration configuration = builder.Build();
         slackToken = configuration["Slack:Token"];
