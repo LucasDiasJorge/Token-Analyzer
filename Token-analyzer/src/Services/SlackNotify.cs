@@ -20,7 +20,7 @@ public sealed class SlackNotify : INotify
     public async Task Notify(string message, CancellationToken cancellationToken = default)
     {
         User user = await _slackApiClient.Users.LookupByEmail(_email, cancellationToken);
-        string channelId = await _slackApiClient.Conversations.Open(user.Id, cancellationToken);
+        string channelId = await _slackApiClient.Conversations.Open(new[] { user.Id }, cancellationToken);
         await _slackApiClient.Chat.PostMessage(
             new Message
             {
