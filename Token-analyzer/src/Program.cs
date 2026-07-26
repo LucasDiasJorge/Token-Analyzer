@@ -76,7 +76,8 @@ public static class Program
         if (!string.IsNullOrWhiteSpace(slackToken) && !string.IsNullOrWhiteSpace(email))
         {
             INotify notify = new SlackNotify(email, slackToken);
-            await notify.Notify($"Relatório de gasto diário:\n{summary}\n{dailyReport}");
+            string slackMessage = ConsoleReportPrinter.BuildSlackMessage(result, startDate, endDate, summary, dailyReport);
+            await notify.Notify(slackMessage);
         }
         else
         {
