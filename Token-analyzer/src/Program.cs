@@ -9,6 +9,7 @@ namespace TokenAnalyzer;
 public static class Program
 {
     private const string ExecuteJobArgument = "--executar-job";
+    private static readonly bool debug = Environment.GetCommandLineArgs().Contains("--debug");
 
     private static async Task<int> Main(string[] args)
     {
@@ -68,15 +69,23 @@ public static class Program
             return 1;
 
         ScanResult result = RunAnalysis(rootPath, startDate, endDate);
-        string summary = ConsoleReportPrinter.PrintSummary(result, rootPath, startDate, endDate);
-        string dailyReport = ConsoleReportPrinter.PrintDailyReport(result);
+        
+        string summary = "";
+        string dailyReport = "";
+        
+        if (debug)
+        {
+            summary = ConsoleReportPrinter.PrintSummary(result, rootPath, startDate, endDate);
+            dailyReport = ConsoleReportPrinter.PrintDailyReport(result);
+        }
+
         string? slackToken, email;
         Configure(out slackToken, out email);
 
         if (!string.IsNullOrWhiteSpace(slackToken) && !string.IsNullOrWhiteSpace(email))
         {
             INotify notify = new SlackNotify(email, slackToken);
-            string slackMessage = ConsoleReportPrinter.BuildSlackMessage(result, startDate, endDate, summary, dailyReport);
+            string slackMessage = ConsoleReportPrinter.BuildSlackMessage(result, startDate, endDate, debug ? summary : "", debug ? dailyReport : "");
             await notify.Notify(slackMessage);
         }
         else

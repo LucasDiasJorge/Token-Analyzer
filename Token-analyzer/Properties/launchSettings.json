@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "TokenAnalyzer": {
+      "commandName": "Project",
+      "commandLineArgs": "--executar-job --debug\r\n"
+    }
+  }
+}
