@@ -23,7 +23,7 @@ public sealed class ChatSessionAnalyzer
         int filesAnalyzed = 0;
         int creditEntriesFound = 0;
 
-        foreach (string chatSessionsDir in FindDirectoriesByName(rootPath, "chatSessions"))
+        foreach (string chatSessionsDir in FindDirectoriesByName("C:\\Users\\Lucas Jorge\\AppData\\Roaming\\Code\\User\\workspaceStorage", "chatSessions"))
         {
             directoriesFound++;
 
