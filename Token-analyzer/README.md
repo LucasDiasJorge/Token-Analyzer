@@ -1,71 +1,123 @@
 # Token Analyzer
 
-Console app em C# para varrer uma pasta raiz, localizar qualquer pasta chamada `chatSessions`, ler os arquivos e somar os credits do campo `details` por dia.
+Aplicacao de console em C# para analisar consumo diario de credits a partir de logs de sessoes do VS Code e enviar um resumo no Slack.
 
-Exemplo de campo analisado:
+## O que o projeto faz
 
-```json
-"details":"GPT-5.4 • 11.1 credits"
-```
+- Busca pastas chatSessions dentro de:
+  - `%AppData%\\Code\\User\\workspaceStorage`
+- Le os arquivos encontrados no periodo definido
+- Extrai valores de credits do campo details
+- Consolida total por dia
+- Exibe relatorio no console
+- Envia o relatorio por mensagem direta no Slack (quando configurado)
+- Pode registrar uma tarefa diaria no Windows Task Scheduler para rodar automaticamente as 18:00
 
 ## Requisitos
 
 - .NET SDK 8.0+
+- Windows (para registro de tarefa diaria)
+- Token de bot no Slack com permissoes para enviar mensagens
+
+## Dependencias principais
+
+- Microsoft.Extensions.Configuration.Json
+- Microsoft.Extensions.Configuration.EnvironmentVariables
+- SlackNet.AspNetCore
+- TaskScheduler
+
+## Configuracao
+
+A aplicacao carrega configuracoes de `appsettings.json` e variaveis de ambiente.
+
+### Opcao 1: Variaveis de ambiente (recomendado)
+
+No Windows PowerShell:
+
+```powershell
+$env:Slack__Token="xoxb-seu-token"
+$env:Slack__Email="seu-email@dominio.com"
+```
+
+### Opcao 2: Arquivo appsettings
+
+Edite `src/appsettings.json`:
+
+```json
+{
+  "Slack": {
+    "Token": "xoxb-seu-token",
+    "Email": "seu-email@dominio.com"
+  }
+}
+```
 
 ## Como executar
 
-Para registrar a tarefa `TokenAnalyzerDailyReport` no Agendador do Windows, configurada para executar diariamente às 18:00, execute sem argumentos no diretório que deverá ser analisado:
+### 1. Restaurar e compilar
 
-```powershell
-dotnet run
+```bash
+dotnet restore TokenAnalyzer.csproj
+dotnet build TokenAnalyzer.csproj
 ```
 
-O diretório atual é armazenado na ação da tarefa e será usado como raiz da análise. Se o horário de registro já tiver passado das 18:00, a primeira execução ocorrerá às 18:00 do dia seguinte.
+### 2. Registrar tarefa diaria (18:00)
 
-Para executar a análise manualmente:
+Sem argumentos, a aplicacao registra a tarefa no Windows:
 
-```powershell
-dotnet run -- "C:\caminho\da\raiz"
+```bash
+dotnet run --project TokenAnalyzer.csproj
 ```
 
-Com período customizado:
+### 3. Executar o job manualmente
 
-```powershell
-dotnet run -- "C:\caminho\da\raiz" "2026-06-01" "2026-06-22"
+```bash
+dotnet run --project TokenAnalyzer.csproj -- --executar-job
 ```
 
-Se quiser enviar o relatório para o Slack, defina a variável de ambiente `Slack__Token` e mantenha o e-mail em `src/appsettings.json`.
+## Saida esperada
 
-Formatos de data aceitos:
+O relatorio inclui:
 
-- `yyyy-MM-dd`
-- `dd/MM/yyyy`
-- `dd-MM-yyyy`
+- Raiz analisada
+- Periodo
+- Quantidade de pastas chatSessions encontradas/processadas
+- Quantidade de arquivos analisados
+- Quantidade de entradas de credits encontradas
+- Tabela diaria com:
+  - Data
+  - Credits
+  - Cost (estimado como credits / 100)
+- Total consolidado
 
-## Regras de filtro por data
+## Estrutura
 
-- Data padrão inicial: `01/06` do ano atual.
-- Data padrão final: hoje.
-- A pasta `chatSessions` só é considerada se ela ou algum arquivo dentro dela estiver no período.
-- Os arquivos processados são filtrados pela data de modificação dentro do período.
-- Cada entrada de credits usa:
-  - `timestamp` da linha, se existir.
-  - senão, data de modificação do arquivo.
+```text
+src/
+  Program.cs
+  appsettings.json
+  Infrastructure/
+    ArgumentParser.cs
+    DailyTaskRegistrar.cs
+    InputValidator.cs
+  Presentation/
+    ConsoleReportPrinter.cs
+  Services/
+    ChatSessionAnalyzer.cs
+    SlackNotify.cs
+    Interfaces/
+      INotify.cs
+```
 
-## Saída
+## Observacoes importantes
 
-Relatório no console com:
+- O caminho de analise de logs e dinamico por usuario, via `%AppData%`.
+- Se Token ou Email do Slack nao estiverem completos, o envio de notificacao e ignorado.
+- Para seguranca, evite versionar segredos reais no repositorio.
 
-- quantidade de pastas `chatSessions` encontradas
-- quantidade de pastas consideradas no período
-- quantidade de arquivos analisados
-- quantidade de entradas de credits encontradas
-- tabela de credits diários
-- total geral
+## Melhorias futuras sugeridas
 
-## Estrutura do código
-
-- `src/Program.cs` — registra o job diário ou orquestra a execução da análise.
-- `src/Infrastructure` — parsing, validação e integração com o Agendador de Tarefas do Windows.
-- `src/Presentation` — formatação e impressão do relatório no console.
-- `src/Services` — análise das sessões e envio da notificação ao Slack.
+- Permitir periodo personalizado por argumento de linha de comando.
+- Permitir configuracao de horario da tarefa diaria.
+- Adicionar testes para parser de credits e datas.
+- Adicionar suporte para saida em CSV.
