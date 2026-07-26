@@ -19,10 +19,10 @@ public static class Program
 
         if (string.Equals(args[0], ExecuteJobArgument, StringComparison.OrdinalIgnoreCase))
         {
-            return await ExecuteScheduledJob(args[1..]);
+            return await ExecuteScheduledJob();
         }
 
-        return await ExecuteAnalysis(args);
+        return await ExecuteAnalysis();
     }
 
     private static int RegisterDailyTask()
@@ -42,13 +42,13 @@ public static class Program
         }
     }
 
-    private static async Task<int> ExecuteScheduledJob(string[] args)
+    private static async Task<int> ExecuteScheduledJob()
     {
         Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Iniciando o job diario...");
 
         try
         {
-            int exitCode = await ExecuteAnalysis(args);
+            int exitCode = await ExecuteAnalysis();
             Console.WriteLine(exitCode == 0 ? "Job concluido com sucesso." : "Job concluido com erro.");
             return exitCode;
         }
@@ -59,9 +59,11 @@ public static class Program
         }
     }
 
-    private static async Task<int> ExecuteAnalysis(string[] args)
+    private static async Task<int> ExecuteAnalysis()
     {
-        (string rootPath, DateTime startDate, DateTime endDate) = ArgumentParser.ParseArguments(args);
+        string rootPath = Directory.GetCurrentDirectory();
+        DateTime startDate = DateTime.Now;
+        DateTime endDate = startDate.AddDays(1);
         if (!InputValidator.ValidateInputs(rootPath, startDate, endDate))
             return 1;
 

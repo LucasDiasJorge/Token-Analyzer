@@ -16,8 +16,6 @@ public sealed class ChatSessionAnalyzer
 
     public ScanResult Scan(string rootPath, DateTime startDate, DateTime endDate)
     {
-        DateTime start = startDate.Date;
-        DateTime end = endDate.Date.AddDays(1).AddTicks(-1);
 
         SortedDictionary<DateTime, decimal> dailyCredits = new SortedDictionary<DateTime, decimal>();
         int directoriesFound = 0;
@@ -30,10 +28,10 @@ public sealed class ChatSessionAnalyzer
             directoriesFound++;
 
             List<string> candidateFiles = EnumerateFilesSafe(chatSessionsDir)
-                .Where(file => IsInRange(File.GetLastWriteTime(file), start, end))
+                .Where(file => IsInRange(File.GetLastWriteTime(file), startDate, endDate))
                 .ToList();
 
-            bool directoryInRange = IsInRange(Directory.GetLastWriteTime(chatSessionsDir), start, end);
+            bool directoryInRange = IsInRange(Directory.GetLastWriteTime(chatSessionsDir), startDate, endDate);
             if (!directoryInRange && candidateFiles.Count == 0)
             {
                 continue;
@@ -48,7 +46,7 @@ public sealed class ChatSessionAnalyzer
 
                 foreach (CreditEntry entry in ParseCreditsFromFile(file, fallbackDate))
                 {
-                    if (!IsInRange(entry.OccurredAt, start, end))
+                    if (!IsInRange(entry.OccurredAt, startDate, endDate))
                     {
                         continue;
                     }
