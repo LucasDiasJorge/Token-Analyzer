@@ -29,7 +29,7 @@ public static class Program
     {
         try
         {
-            string rootPath = Directory.GetCurrentDirectory();
+            string rootPath = ChatSessionAnalyzer.GetWorkspaceStoragePath();
             DailyTaskRegistrar.Register(rootPath);
             Console.WriteLine($"Tarefa '{DailyTaskRegistrar.TaskName}' registrada para executar diariamente as 18:00.");
             Console.WriteLine($"Raiz que sera analisada: {rootPath}");
@@ -61,8 +61,8 @@ public static class Program
 
     private static async Task<int> ExecuteAnalysis()
     {
-        string rootPath = Directory.GetCurrentDirectory();
-        DateTime startDate = DateTime.Now;
+        string rootPath = ChatSessionAnalyzer.GetWorkspaceStoragePath();
+        DateTime startDate = DateTime.Now.AddHours(-8);
         DateTime endDate = startDate.AddDays(1);
         if (!InputValidator.ValidateInputs(rootPath, startDate, endDate))
             return 1;

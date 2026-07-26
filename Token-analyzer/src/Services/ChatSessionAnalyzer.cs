@@ -22,9 +22,8 @@ public sealed class ChatSessionAnalyzer
         int directoriesProcessed = 0;
         int filesAnalyzed = 0;
         int creditEntriesFound = 0;
-        string workspaceStoragePath = GetWorkspaceStoragePath();
 
-        foreach (string chatSessionsDir in FindDirectoriesByName(workspaceStoragePath, "chatSessions"))
+        foreach (string chatSessionsDir in FindDirectoriesByName(rootPath, "chatSessions"))
         {
             directoriesFound++;
 
@@ -123,10 +122,10 @@ public sealed class ChatSessionAnalyzer
     private static bool IsInRange(DateTime value, DateTime start, DateTime end)
         => value >= start && value <= end;
 
-    private static string GetWorkspaceStoragePath()
+    public static string GetWorkspaceStoragePath()
     {
-        string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        return Path.Combine(appDataPath, "Code", "User", "workspaceStorage");
+        string userName = Environment.UserName;
+        return Path.Combine("C:\\Users", userName, "AppData", "Roaming", "Code", "User", "workspaceStorage");
     }
 
     private static IEnumerable<string> FindDirectoriesByName(string rootPath, string targetDirectoryName)
