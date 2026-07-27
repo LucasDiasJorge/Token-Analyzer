@@ -21,7 +21,7 @@ public static class InputValidator
 
         foreach (string missingRoot in missingRoots)
         {
-            Console.WriteLine($"Aviso: diretorio nao encontrado e sera ignorado: {missingRoot}");
+            Console.Error.WriteLine($"Aviso: diretorio nao encontrado e sera ignorado: {missingRoot}");
         }
 
         if (missingRoots.Length == roots.Length)

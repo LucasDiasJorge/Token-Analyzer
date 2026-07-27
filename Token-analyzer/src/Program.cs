@@ -33,12 +33,6 @@ public static class Program
             List<string> rootPaths = GetWorkspaceRoots();
             string rootPath = rootPaths.First();
             DailyTaskRegistrar.Register(rootPath);
-            Console.WriteLine($"Tarefa '{DailyTaskRegistrar.TaskName}' registrada para executar diariamente as 18:00.");
-            Console.WriteLine("Raizes que serao analisadas:");
-            foreach (string path in rootPaths)
-            {
-                Console.WriteLine($"- {path}");
-            }
             return 0;
         }
         catch (Exception exception)
@@ -50,12 +44,9 @@ public static class Program
 
     private static async Task<int> ExecuteScheduledJob()
     {
-        Console.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Iniciando o job diario...");
-
         try
         {
             int exitCode = await ExecuteAnalysis();
-            Console.WriteLine(exitCode == 0 ? "Job concluido com sucesso." : "Job concluido com erro.");
             return exitCode;
         }
         catch (Exception exception)
@@ -97,10 +88,6 @@ public static class Program
             INotify notify = new SlackNotify(email, slackToken);
             string slackMessage = ConsoleReportPrinter.BuildSlackMessage(result, startDate, endDate, debug ? summary : "", debug ? dailyReport : "");
             await notify.Notify(slackMessage);
-        }
-        else
-        {
-            Console.WriteLine("Slack notification skipped because Slack settings are incomplete.");
         }
 
         return 0;

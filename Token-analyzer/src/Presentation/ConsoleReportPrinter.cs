@@ -45,10 +45,7 @@ public static class ConsoleReportPrinter
         report.AppendLine($"Arquivos analisados: {result.FilesAnalyzed}");
         report.Append($"Entradas de tokens encontradas: {result.CreditEntriesFound}");
 
-        string output = report.ToString();
-        Console.WriteLine(output);
-        Console.WriteLine();
-        return output;
+        return report.ToString();
     }
 
     public static string PrintDailyReport(ScanResult result)
@@ -56,7 +53,6 @@ public static class ConsoleReportPrinter
         if (result.DailyCredits.Count == 0)
         {
             const string emptyReport = "Nenhum gasto encontrado no periodo informado.";
-            Console.WriteLine(emptyReport);
             return emptyReport;
         }
 
@@ -71,9 +67,7 @@ public static class ConsoleReportPrinter
         report.AppendLine(new string('-', DateWidth + CreditsWidth + CostWidth));
         report.Append($"{"TOTAL",-DateWidth}{result.TotalCredits,16:F2}{result.TotalCredits / 100,12:C2}");
 
-        string output = report.ToString();
-        Console.WriteLine(output);
-        return output;
+        return report.ToString();
     }
 
     public static string BuildSlackMessage(ScanResult result, DateTime startDate, DateTime endDate, string summary, string dailyReport)
