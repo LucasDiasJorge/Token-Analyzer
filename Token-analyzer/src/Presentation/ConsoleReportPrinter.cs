@@ -30,11 +30,15 @@ public static class ConsoleReportPrinter
         "🤖 Check-in importante: consumo acima do normal. Hora de dar uma olhada no painel."
     };
 
-    public static string PrintSummary(ScanResult result, string rootPath, DateTime startDate, DateTime endDate)
+    public static string PrintSummary(ScanResult result, IEnumerable<string> rootPaths, DateTime startDate, DateTime endDate)
     {
         StringBuilder report = new StringBuilder();
         report.AppendLine("=== Relatorio de Gasto Diario (tokens) ===");
-        report.AppendLine($"Raiz analisada: {rootPath}");
+        report.AppendLine("Raizes analisadas:");
+        foreach (string rootPath in rootPaths)
+        {
+            report.AppendLine($"- {rootPath}");
+        }
         report.AppendLine($"Periodo: {startDate:dd/MM/yyyy} ate {endDate:dd/MM/yyyy}");
         report.AppendLine($"Pastas chatSessions encontradas: {result.ChatSessionDirectoriesFound}");
         report.AppendLine($"Pastas consideradas no periodo: {result.ChatSessionDirectoriesProcessed}");

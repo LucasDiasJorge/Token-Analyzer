@@ -30,10 +30,15 @@ public static class Program
     {
         try
         {
-            string rootPath = ChatSessionAnalyzer.GetWorkspaceStoragePath();
+            List<string> rootPaths = GetWorkspaceRoots();
+            string rootPath = rootPaths.First();
             DailyTaskRegistrar.Register(rootPath);
             Console.WriteLine($"Tarefa '{DailyTaskRegistrar.TaskName}' registrada para executar diariamente as 18:00.");
-            Console.WriteLine($"Raiz que sera analisada: {rootPath}");
+            Console.WriteLine("Raizes que serao analisadas:");
+            foreach (string path in rootPaths)
+            {
+                Console.WriteLine($"- {path}");
+            }
             return 0;
         }
         catch (Exception exception)
@@ -62,20 +67,25 @@ public static class Program
 
     private static async Task<int> ExecuteAnalysis()
     {
-        string rootPath = ChatSessionAnalyzer.GetWorkspaceStoragePath();
+        List<string> rootPaths = GetWorkspaceRoots();
         DateTime startDate = DateTime.Now.AddHours(-8);
         DateTime endDate = startDate.AddDays(1);
-        if (!InputValidator.ValidateInputs(rootPath, startDate, endDate))
+        if (!InputValidator.ValidateInputs(rootPaths, startDate, endDate))
             return 1;
 
-        ScanResult result = RunAnalysis(rootPath, startDate, endDate);
+        List<string> existingRootPaths = rootPaths
+            .Where(Directory.Exists)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        ScanResult result = RunAnalysis(existingRootPaths, startDate, endDate);
         
         string summary = "";
         string dailyReport = "";
         
         if (debug)
         {
-            summary = ConsoleReportPrinter.PrintSummary(result, rootPath, startDate, endDate);
+            summary = ConsoleReportPrinter.PrintSummary(result, existingRootPaths, startDate, endDate);
             dailyReport = ConsoleReportPrinter.PrintDailyReport(result);
         }
 
@@ -107,9 +117,17 @@ public static class Program
         email = configuration["Slack:Email"];
     }
 
-    private static ScanResult RunAnalysis(string rootPath, DateTime startDate, DateTime endDate)
+    private static ScanResult RunAnalysis(IEnumerable<string> rootPaths, DateTime startDate, DateTime endDate)
     {
         ChatSessionAnalyzer analyzer = new ChatSessionAnalyzer();
-        return analyzer.Scan(rootPath, startDate, endDate);
+        return analyzer.Scan(rootPaths, startDate, endDate);
+    }
+
+    private static List<string> GetWorkspaceRoots()
+    {
+        return ChatSessionAnalyzer
+            .GetWorkspaceStoragePaths("Code", "Code - Insiders")
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 }

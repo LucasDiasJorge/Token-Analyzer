@@ -15,6 +15,9 @@ public sealed class ChatSessionAnalyzer
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public ScanResult Scan(string rootPath, DateTime startDate, DateTime endDate)
+        => Scan(new[] { rootPath }, startDate, endDate);
+
+    public ScanResult Scan(IEnumerable<string> rootPaths, DateTime startDate, DateTime endDate)
     {
 
         SortedDictionary<DateTime, decimal> dailyCredits = new SortedDictionary<DateTime, decimal>();
@@ -23,40 +26,43 @@ public sealed class ChatSessionAnalyzer
         int filesAnalyzed = 0;
         int creditEntriesFound = 0;
 
-        foreach (string chatSessionsDir in FindDirectoriesByName(rootPath, "chatSessions"))
+        foreach (string rootPath in rootPaths.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            directoriesFound++;
-
-            List<string> candidateFiles = EnumerateFilesSafe(chatSessionsDir)
-                .Where(file => IsInRange(File.GetLastWriteTime(file), startDate, endDate))
-                .ToList();
-
-            bool directoryInRange = IsInRange(Directory.GetLastWriteTime(chatSessionsDir), startDate, endDate);
-            if (!directoryInRange && candidateFiles.Count == 0)
+            foreach (string chatSessionsDir in FindDirectoriesByName(rootPath, "chatSessions"))
             {
-                continue;
-            }
+                directoriesFound++;
 
-            directoriesProcessed++;
+                List<string> candidateFiles = EnumerateFilesSafe(chatSessionsDir)
+                    .Where(file => IsInRange(File.GetLastWriteTime(file), startDate, endDate))
+                    .ToList();
 
-            foreach (string file in candidateFiles)
-            {
-                filesAnalyzed++;
-                DateTime fallbackDate = File.GetLastWriteTime(file);
-
-                foreach (CreditEntry entry in ParseCreditsFromFile(file, fallbackDate))
+                bool directoryInRange = IsInRange(Directory.GetLastWriteTime(chatSessionsDir), startDate, endDate);
+                if (!directoryInRange && candidateFiles.Count == 0)
                 {
-                    if (!IsInRange(entry.OccurredAt, startDate, endDate))
-                    {
-                        continue;
-                    }
+                    continue;
+                }
 
-                    creditEntriesFound++;
-                    DateTime date = entry.OccurredAt.Date;
+                directoriesProcessed++;
 
-                    if (!dailyCredits.TryAdd(date, entry.Credits))
+                foreach (string file in candidateFiles)
+                {
+                    filesAnalyzed++;
+                    DateTime fallbackDate = File.GetLastWriteTime(file);
+
+                    foreach (CreditEntry entry in ParseCreditsFromFile(file, fallbackDate))
                     {
-                        dailyCredits[date] += entry.Credits;
+                        if (!IsInRange(entry.OccurredAt, startDate, endDate))
+                        {
+                            continue;
+                        }
+
+                        creditEntriesFound++;
+                        DateTime date = entry.OccurredAt.Date;
+
+                        if (!dailyCredits.TryAdd(date, entry.Credits))
+                        {
+                            dailyCredits[date] += entry.Credits;
+                        }
                     }
                 }
             }
@@ -122,10 +128,18 @@ public sealed class ChatSessionAnalyzer
     private static bool IsInRange(DateTime value, DateTime start, DateTime end)
         => value >= start && value <= end;
 
-    public static string GetWorkspaceStoragePath()
+    public static string GetWorkspaceStoragePath(string ide)
     {
         string userName = Environment.UserName;
-        return Path.Combine("C:\\Users", userName, "AppData", "Roaming", "Code", "User", "workspaceStorage");
+        return Path.Combine("C:\\Users", userName, "AppData", "Roaming", ide, "User", "workspaceStorage");
+    }
+
+    public static IReadOnlyList<string> GetWorkspaceStoragePaths(params string[] ideNames)
+    {
+        return ideNames
+            .Select(GetWorkspaceStoragePath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static IEnumerable<string> FindDirectoriesByName(string rootPath, string targetDirectoryName)
