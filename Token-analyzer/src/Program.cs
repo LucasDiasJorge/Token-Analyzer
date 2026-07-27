@@ -112,7 +112,7 @@ public static class Program
 
     private static List<string> GetWorkspaceRoots()
     {
-        return ChatSessionAnalyzer
+        return WorkspaceStoragePathProvider
             .GetWorkspaceStoragePaths("Code", "Code - Insiders")
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();

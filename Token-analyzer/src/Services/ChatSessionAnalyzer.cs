@@ -1,25 +1,26 @@
-using System.Collections.Generic;
-using System.Globalization;
-using System.Text.RegularExpressions;
-
 namespace TokenAnalyzer.Services;
 
 public sealed class ChatSessionAnalyzer
 {
-    private static readonly Regex DetailsCreditsRegex = new(
-        "\"details\"\\s*:\\s*\"[^\"]*?(?<credits>[0-9]+(?:\\.[0-9]+)?)\\s+credits\"",
-        RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    private readonly ChatSessionFileDiscovery fileDiscovery;
+    private readonly ChatCreditParser creditParser;
 
-    private static readonly Regex TimestampRegex = new(
-        "\"timestamp\"\\s*:\\s*(?<ts>[0-9]{10,13})",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    public ChatSessionAnalyzer()
+        : this(new ChatSessionFileDiscovery(), new ChatCreditParser())
+    {
+    }
+
+    internal ChatSessionAnalyzer(ChatSessionFileDiscovery fileDiscovery, ChatCreditParser creditParser)
+    {
+        this.fileDiscovery = fileDiscovery;
+        this.creditParser = creditParser;
+    }
 
     public ScanResult Scan(string rootPath, DateTime startDate, DateTime endDate)
         => Scan(new[] { rootPath }, startDate, endDate);
 
     public ScanResult Scan(IEnumerable<string> rootPaths, DateTime startDate, DateTime endDate)
     {
-
         SortedDictionary<DateTime, decimal> dailyCredits = new SortedDictionary<DateTime, decimal>();
         int directoriesFound = 0;
         int directoriesProcessed = 0;
@@ -28,15 +29,17 @@ public sealed class ChatSessionAnalyzer
 
         foreach (string rootPath in rootPaths.Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            foreach (string chatSessionsDir in FindDirectoriesByName(rootPath, "chatSessions"))
+            foreach (string chatSessionsDir in fileDiscovery.FindSessionDirectories(rootPath))
             {
                 directoriesFound++;
 
-                List<string> candidateFiles = EnumerateFilesSafe(chatSessionsDir)
-                    .Where(file => IsInRange(File.GetLastWriteTime(file), startDate, endDate))
-                    .ToList();
+                IReadOnlyList<ChatSessionFile> candidateFiles = fileDiscovery
+                    .FindFilesInRange(chatSessionsDir, startDate, endDate);
 
-                bool directoryInRange = IsInRange(Directory.GetLastWriteTime(chatSessionsDir), startDate, endDate);
+                bool directoryInRange = IsInRange(
+                    fileDiscovery.GetLastWriteTime(chatSessionsDir),
+                    startDate,
+                    endDate);
                 if (!directoryInRange && candidateFiles.Count == 0)
                 {
                     continue;
@@ -44,12 +47,11 @@ public sealed class ChatSessionAnalyzer
 
                 directoriesProcessed++;
 
-                foreach (string file in candidateFiles)
+                foreach (ChatSessionFile file in candidateFiles)
                 {
                     filesAnalyzed++;
-                    DateTime fallbackDate = File.GetLastWriteTime(file);
 
-                    foreach (CreditEntry entry in ParseCreditsFromFile(file, fallbackDate))
+                    foreach (CreditEntry entry in creditParser.ParseFile(file.Path, file.LastWriteTime))
                     {
                         if (!IsInRange(entry.OccurredAt, startDate, endDate))
                         {
@@ -79,160 +81,6 @@ public sealed class ChatSessionAnalyzer
             creditEntriesFound);
     }
 
-    private static IEnumerable<CreditEntry> ParseCreditsFromFile(string filePath, DateTime fallbackTimestamp)
-    {
-        foreach (string line in File.ReadLines(filePath))
-        {
-            if (!line.Contains("\"details\"", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            Match detailsMatch = DetailsCreditsRegex.Match(line);
-            if (!detailsMatch.Success)
-            {
-                continue;
-            }
-
-            string rawCredits = detailsMatch.Groups["credits"].Value;
-            if (!decimal.TryParse(rawCredits, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal credits))
-            {
-                continue;
-            }
-
-            DateTime occurredAt = fallbackTimestamp;
-            Match timestampMatch = TimestampRegex.Match(line);
-            if (timestampMatch.Success && long.TryParse(timestampMatch.Groups["ts"].Value, out long rawTimestamp))
-            {
-                occurredAt = ToDateTime(rawTimestamp);
-            }
-
-            yield return new CreditEntry(occurredAt, credits);
-        }
-    }
-
-    private static DateTime ToDateTime(long unix)
-    {
-        try
-        {
-            return unix > 9_999_999_999
-                ? DateTimeOffset.FromUnixTimeMilliseconds(unix).LocalDateTime
-                : DateTimeOffset.FromUnixTimeSeconds(unix).LocalDateTime;
-        }
-        catch (ArgumentOutOfRangeException)
-        {
-            return DateTime.MinValue;
-        }
-    }
-
     private static bool IsInRange(DateTime value, DateTime start, DateTime end)
         => value >= start && value <= end;
-
-    public static string GetWorkspaceStoragePath(string ide)
-    {
-        string userName = Environment.UserName;
-        return Path.Combine("C:\\Users", userName, "AppData", "Roaming", ide, "User", "workspaceStorage");
-    }
-
-    public static IReadOnlyList<string> GetWorkspaceStoragePaths(params string[] ideNames)
-    {
-        return ideNames
-            .Select(GetWorkspaceStoragePath)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static IEnumerable<string> FindDirectoriesByName(string rootPath, string targetDirectoryName)
-    {
-        Stack<string> stack = new Stack<string>();
-        stack.Push(rootPath);
-
-        while (stack.Count > 0)
-        {
-            string current = stack.Pop();
-
-            IEnumerable<string> subDirectories;
-            try
-            {
-                subDirectories = Directory.EnumerateDirectories(current);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                continue;
-            }
-            catch (DirectoryNotFoundException)
-            {
-                continue;
-            }
-
-            foreach (string subDir in subDirectories)
-            {
-                if (string.Equals(Path.GetFileName(subDir), targetDirectoryName, StringComparison.OrdinalIgnoreCase))
-                {
-                    yield return subDir;
-                }
-
-                stack.Push(subDir);
-            }
-        }
-    }
-
-    private static IEnumerable<string> EnumerateFilesSafe(string rootDir)
-    {
-        Stack<string> stack = new Stack<string>();
-        stack.Push(rootDir);
-
-        while (stack.Count > 0)
-        {
-            string current = stack.Pop();
-
-            IEnumerable<string> files;
-            try
-            {
-                files = Directory.EnumerateFiles(current);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                continue;
-            }
-            catch (DirectoryNotFoundException)
-            {
-                continue;
-            }
-
-            foreach (string file in files)
-            {
-                yield return file;
-            }
-
-            IEnumerable<string> subDirectories;
-            try
-            {
-                subDirectories = Directory.EnumerateDirectories(current);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                continue;
-            }
-            catch (DirectoryNotFoundException)
-            {
-                continue;
-            }
-
-            foreach (string subDir in subDirectories)
-            {
-                stack.Push(subDir);
-            }
-        }
-    }
-
-    private readonly record struct CreditEntry(DateTime OccurredAt, decimal Credits);
 }
-
-public sealed record ScanResult(
-    SortedDictionary<DateTime, decimal> DailyCredits,
-    decimal TotalCredits,
-    int ChatSessionDirectoriesFound,
-    int ChatSessionDirectoriesProcessed,
-    int FilesAnalyzed,
-    int CreditEntriesFound);

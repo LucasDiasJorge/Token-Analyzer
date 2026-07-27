@@ -7,10 +7,10 @@ public static class DailyTaskRegistrar
 {
     public const string TaskName = "TokenAnalyzerDailyReport";
 
-    private const string TaskDescription = "Executa o relatorio do Token Analyzer diariamente as 18:00.";
+    private const string TaskDescription = "Executa o relatorio do Token Analyzer diariamente as 18:01.";
     private const string ExecuteJobArgument = "--executar-job";
     private const int DailyExecutionHour = 18;
-    private const int DailyExecutionMinute = 11;
+    private const int DailyExecutionMinute = 01;
     private const string LauncherFolderName = "TokenAnalyzer";
     private const string LauncherFileName = "run-token-analyzer-hidden.vbs";
 
